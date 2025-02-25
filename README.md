@@ -8,38 +8,48 @@ This project implements a chat dialogue system that leverages Large Language Mod
 llm-chat-dialogue/
 ├── app/
 │   ├── __init__.py
-│   ├── main.py          # FastAPI application entry
+│   ├── main.py          # FastAPI backend entry
 │   ├── rag/            # RAG implementation
 │   │   └── __init__.py
 │   └── models/         # Data models
 │       └── __init__.py
-├── frontend/
-│   └── streamlit_app.py # Streamlit frontend application
-├── requirements.txt    # Project dependencies
+├── static/
+│   └── index.html      # HTML/JS frontend interface
+├── requirements.txt    # Python dependencies
 └── README.md          # Project documentation
 ```
 
-## Setup
+## Setup Instructions
 
-1. Create a virtual environment:
+1. Clone repository:
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+git clone https://github.com/riley1018/llm-chat-dialogue.git
+cd llm-chat-dialogue
 ```
 
-2. Install dependencies:
+2. Create virtual environment:
+```bash
+python -m venv venv
+venv\Scripts\activate  # Windows
+```
+
+3. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
 ## Running the Application
 
-1. Start the backend server:
+Start backend server:
 ```bash
 uvicorn app.main:app --reload
 ```
 
-2. Start the Streamlit frontend:
-```bash
-streamlit run frontend/streamlit_app.py
-```
+Access the chat interface at:  
+http://localhost:8000
+
+## Key Features
+- Modern chat interface with HTML/CSS
+- Document upload capability (PDF/TXT)
+- API endpoint for RAG integration
+- Git version control integration
