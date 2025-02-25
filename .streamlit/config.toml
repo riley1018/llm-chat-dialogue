@@ -1,0 +1,10 @@
+[theme]
+# 主要顏色
+primaryColor="#4b8aff"
+backgroundColor = "#f0f2f6"
+secondaryBackgroundColor = "#ffffff"
+textColor = "#262730"
+
+
+# 字體設置
+font = "sans serif"

@@ -1,23 +1,44 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File
-from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+import streamlit as st
 from typing import List, Optional
-import uvicorn
+from pydantic import BaseModel
 
-app = FastAPI(title="LLM Chat API")
-
-# 啟用 CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # 在生產環境中應該限制來源
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+st.set_page_config(
+    page_title="LLM Chat",
+    page_icon="💬",
+    layout="wide"
 )
 
-# 掛載靜態文件
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+st.title("LLM Chat Interface")
+
+# 初始化聊天歷史
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# 顯示聊天歷史
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# 聊天輸入
+if prompt := st.chat_input("輸入您的訊息..."):
+    # 添加用戶訊息
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    # TODO: 在這裡實現RAG邏輯
+    response = "這是一個測試回應。RAG功能即將實現。"
+
+    # 添加助手回應
+    st.session_state.messages.append({"role": "assistant", "content": response})
+    with st.chat_message("assistant"):
+        st.markdown(response)
+
+# 文件上傳功能
+uploaded_file = st.sidebar.file_uploader("上傳文件", type=["txt", "pdf", "doc", "docx"])
+if uploaded_file is not None:
+    st.sidebar.success(f"文件 '{uploaded_file.name}' 上傳成功！")
+    # TODO: 實現文件處理邏輯
 
 class Message(BaseModel):
     role: str
@@ -30,30 +51,3 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     response: str
     sources: Optional[List[str]] = None
-
-@app.get("/")
-async def root():
-    return {"message": "LLM Chat API is running"}
-
-@app.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
-    try:
-        # TODO: Implement RAG logic here
-        # This is a placeholder response
-        return ChatResponse(
-            response="This is a placeholder response. RAG implementation pending.",
-            sources=[]
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
-    try:
-        # TODO: 實現文件處理邏輯
-        return {"filename": file.filename, "status": "success"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
