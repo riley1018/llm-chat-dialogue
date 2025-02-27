@@ -86,11 +86,36 @@ with st.sidebar:
         st.error("無法獲取模型列表。請確保 Ollama 服務正在運行。")
         selected_model = None
 
+    # 初始化 GraphRAG
+    if "graph_rag" not in st.session_state:
+        from graph_rag import GraphRAG
+        st.session_state.graph_rag = GraphRAG()
+
     # 文件上傳功能
-    uploaded_file = st.file_uploader("上傳文件", type=["txt", "pdf", "doc", "docx"])
+    uploaded_file = st.file_uploader("上傳CSV文件", type=["csv"])
     if uploaded_file is not None:
-        st.success(f"文件 '{uploaded_file.name}' 上傳成功！")
-        # TODO: 實現文件處理邏輯
+        try:
+            # 保存上传的文件
+            import tempfile
+            import os
+            
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as tmp_file:
+                tmp_file.write(uploaded_file.getvalue())
+                tmp_path = tmp_file.name
+            
+            # 处理CSV文件
+            st.session_state.graph_rag.process_csv(tmp_path)
+            
+            # 获取图谱统计信息
+            stats = st.session_state.graph_rag.get_graph_statistics()
+            st.success(f"文件 '{uploaded_file.name}' 處理成功！")
+            st.info(f"知識圖譜統計：\n- 節點數：{stats['num_nodes']}\n- 邊數：{stats['num_edges']}\n- 節點類型數：{stats['node_types']}")
+            
+            # 删除临时文件
+            os.unlink(tmp_path)
+            
+        except Exception as e:
+            st.error(f"處理文件時發生錯誤：{str(e)}")
 
 # 顯示聊天歷史
 for message in st.session_state.messages:
@@ -99,23 +124,39 @@ for message in st.session_state.messages:
 
 # 聊天輸入
 if prompt := st.chat_input("輸入您的訊息..."):
-    if not selected_model:
-        st.error("請先選擇一個模型")
-        logging.warning("使用者嘗試在未選擇模型的情況下發送訊息")
+    # 添加用户消息到历史记录
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    # 检查是否已上传并处理了CSV文件
+    if "graph_rag" in st.session_state:
+        try:
+            # 使用GraphRAG进行查询
+            rag_results = st.session_state.graph_rag.query(prompt)
+            
+            # 构建带有上下文的提示
+            context = "基於以下相關信息回答：\n"
+            for ctx in rag_results['relevant_contexts']:
+                context += f"- 主要信息：{ctx['node']}\n"
+                context += f"- 相關信息：{', '.join(str(n) for n in ctx['neighbors'])}\n"
+            
+            enhanced_prompt = f"{context}\n用戶問題：{prompt}"
+            
+        except Exception as e:
+            st.error(f"查詢知識圖譜時發生錯誤：{str(e)}")
+            enhanced_prompt = prompt
     else:
-        # 添加用戶訊息
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
+        enhanced_prompt = prompt
 
-        # 獲取模型回應
-        with st.spinner('思考中...'):
-            response = chat_with_model(selected_model, prompt)
-
-        # 添加助手回應
-        st.session_state.messages.append({"role": "assistant", "content": response})
+    # 获取模型回应
+    if selected_model:
         with st.chat_message("assistant"):
+            response = chat_with_model(selected_model, enhanced_prompt)
+            st.session_state.messages.append({"role": "assistant", "content": response})
             st.markdown(response)
+    else:
+        st.error("請先選擇一個模型")
 
 class Message(BaseModel):
     role: str
